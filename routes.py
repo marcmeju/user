@@ -11,7 +11,8 @@ def index():
 # Get all users
 @user_blueprint.route('/all', methods=['GET'])
 def get_users():
-    return 'TO BE IMPLEMENTED - Retrieve all users'
+    all_users = User.query.all()
+    return jsonify([user.serialize() for user in all_users])
 
 #Create a User   
 @user_blueprint.route('/create', methods=['POST'])
