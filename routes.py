@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models import User, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 user_blueprint = Blueprint('user_api_routes', __name__, url_prefix='/api/user')
 
@@ -17,7 +18,25 @@ def get_users():
 #Create a User   
 @user_blueprint.route('/create', methods=['POST'])
 def create_user():
-    return 'Create a new user'
+    try:
+        user = User()
+        user.username = request.form['username']
+        user.email = request.form['email']
+        user.password = generate_password_hash(request.form['password'], method='pbkdf2:sha1', salt_length=8)       
+
+        # create a new user in the database
+        db.session.add(user)
+        db.session.commit()
+
+        response = {
+            "message": "User created successfully",
+            "result": user.serialize()}
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        response = {
+            "message": "Error creating user"}
+        return jsonify(response), 400
+    return jsonify(response), 201
 
 # Retrieve a User by ID
 @user_blueprint.route('/<int:id>', methods=['GET'])
