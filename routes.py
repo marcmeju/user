@@ -22,8 +22,12 @@ def create_user():
 # Retrieve a User by ID
 @user_blueprint.route('/<int:id>', methods=['GET'])
 def get_user(id):
-    return f'TO BE IMPLEMENTED - Retrieve user with ID: {id}'
-
+    user = User.query.get(id)
+    if user:                        
+        return jsonify(user.serialize())
+    else:
+        return jsonify({"Message": f"User with ID {id} not found"}), 404
+    
 # Retrieve a User by username
 @user_blueprint.route('/<string:username>', methods=['GET'])
 def get_user_by_username(username):
