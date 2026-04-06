@@ -1,4 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+import time
 
 #initialize the database
 db = SQLAlchemy()
@@ -16,7 +18,10 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True) 
     is_admin = db.Column(db.Boolean, default=False)
     is_authenticated = db.Column(db.Boolean, default=False)
+    api_key = db.Column(db.String(120), unique=True, nullable=True)
 
+    def get_id(self):
+        return str(self.id)
 
     def __repr__(self):
         return f'<User {self.id}, {self.username}>'  
@@ -28,6 +33,9 @@ class User(db.Model):
             'email': self.email,
             'is_active': self.is_active,
             'is_admin': self.is_admin,
-            'is_authenticated': self.is_authenticated
-
+            'is_authenticated': self.is_authenticated,
+            'api_key': self.api_key
         }
+    
+    def update_api_key(self):
+        self.api_key = generate_password_hash(f"{self.username}{self.email}" + "{str(time.time())}", method='pbkdf2:sha1', salt_length=8)
