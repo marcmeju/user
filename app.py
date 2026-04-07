@@ -32,7 +32,7 @@ migrate = Migrate(app, db)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.one_or_404(id=user_id)
+    return User.query.filter_by(id=user_id).first()
 
 @login_manager.request_loader
 def load_user_from_request(request):

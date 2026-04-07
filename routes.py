@@ -1,7 +1,10 @@
+import time
 from flask import Blueprint, jsonify, request, make_response
 from models import User, db
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import login_user, logout_user, login_required
+from flask_login import current_user, login_user, logout_user, login_required
+from functools import wraps
+from datetime import datetime, timedelta
 
 user_blueprint = Blueprint('user_api_routes', __name__, url_prefix='/api/user')
 
@@ -88,6 +91,7 @@ def login():
     print(f"Password valid: {password_valid} for user: {user.username}")
     if password_valid:
         try:
+            user.session_created_at = time.time()
             user.update_api_key()
             db.session.commit()
             login_user(user)
@@ -97,13 +101,49 @@ def login():
             return make_response(jsonify(response), 500)
         print(f"User {user.username} logged in successfully")
         response = {"message": "Login successful", "user": user.serialize()}
+        user.is_authenticated = True
         return make_response(jsonify(response), 200)
     
     response = {"message": "2nd Invalid username and/or password"}
     return make_response(jsonify(response), 401)
 
+@user_blueprint.route('/logout', methods=['POST'])
+def logout():
+    if current_user.is_authenticated:
+        logout_user()
+        current_user.api_key = None
+        current_user.is_authenticated = False
+        db.session.commit()
+        return make_response(jsonify({"message": "Logout successful"}), 200)
+    return make_response(jsonify({"message": "User is currently logged Out"}), 400)
+
+def check_session_expiration(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and current_user.api_key:
+            if current_user.is_session_expired(timeout_minutes=30):
+                logout_user()
+                current_user.api_key = None
+                db.session.commit()
+                return jsonify({"message": "Session expired"}), 401
+            current_user.last_activity = time.time()
+            db.session.commit()
+        return f(*args, **kwargs)
+    return decorated_function
+
+@user_blueprint.route('/protected', methods=['GET'])
+@login_required
+@check_session_expiration
+def protected_route():
+    return jsonify({"message": "Success - you are authenticated and your session is active! That's why you can see this protected route."}), 200
+
+def user_exists(user_identifier):
+    if User.query.filter_by(username=user_identifier).first() or User.query.filter_by(email=user_identifier).first():
+        return True
+    return False
 
 def validate_login_data(data):
     if ('username' not in data and 'email' not in data) or 'password' not in data:
         return False, "Missing required fields: username OR email, and password are required."
     return True, "" 
+
