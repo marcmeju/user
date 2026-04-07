@@ -13,6 +13,14 @@ user_blueprint = Blueprint('user_api_routes', __name__, url_prefix='/api/user')
 def index():
     return 'Welcome to the User API'
 
+@user_blueprint.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "user-service",
+        "timestamp": time.time().isoformat()
+    }), 200
+
 # Get all users
 @user_blueprint.route('/all', methods=['GET'])
 def get_users():
