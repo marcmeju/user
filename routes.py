@@ -5,6 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import current_user, login_user, logout_user, login_required
 from functools import wraps
 from datetime import datetime, timedelta
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 user_blueprint = Blueprint('user_api_routes', __name__, url_prefix='/api/user')
 
@@ -18,7 +21,7 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "service": "user-service",
-        "timestamp": time.time().isoformat()
+        "timestamp": time.time()
     }), 200
 
 # Get all users
@@ -44,7 +47,7 @@ def create_user():
             "message": "User created successfully",
             "result": user.serialize()}
     except Exception as e:
-        print(f"Error creating user: {str(e)}")
+        logging.error(f"Error creating user: {str(e)}")
         response = {
             "message": "Error creating user"}
         return jsonify(response), 400
@@ -75,7 +78,7 @@ def login():
     username = request.form.get('username') 
     email = request.form.get('email')
     password = request.form.get('password')
-    print(f"Received login request with username: {username}, email: {email}")  
+    logging.info(f"Received login request with username: {username}, email: {email}")  
 
     if not (username or email):
         return make_response(jsonify({"message": "Either username or email and a password must be present"}), 400)
@@ -84,19 +87,19 @@ def login():
     
     if email:
         user = User.query.filter_by(email=email).first()
-        print(f"Queried user by email: {email}, found: {user}")
+        logging.info(f"Queried user by email: {email}, found: {user}")
     
     if not user and username:
         user = User.query.filter_by(username=username).first()
-        print(f"Queried user by username: {username}, found: {user}")
+        logging.info(f"Queried user by username: {username}, found: {user}")
     if not user:
         response = {"message": "Invalid username and/or password"}
         return make_response(jsonify(response), 401)
     
     user.password = str(user.password) if user.password else ""
-    print(f"User password hash: {user.password} for user: {user.username}")
+    logging.info(f"User password hash: {user.password} for user: {user.username}")
     password_valid = check_password_hash(user.password, password)
-    print(f"Password valid: {password_valid} for user: {user.username}")
+    logging.info(f"Password valid: {password_valid} for user: {user.username}")
     if password_valid:
         try:
             user.session_created_at = time.time()
@@ -104,10 +107,10 @@ def login():
             db.session.commit()
             login_user(user)
         except Exception as e:
-            print(f"Error logging in user: {str(e)}")
+            logging.error(f"Error logging in user: {str(e)}")
             response = {"message": "Error logging in user"}
             return make_response(jsonify(response), 500)
-        print(f"User {user.username} logged in successfully")
+        logging.info(f"User {user.username} logged in successfully")
         response = {"message": "Login successful", "user": user.serialize()}
         user.is_authenticated = True
         return make_response(jsonify(response), 200)

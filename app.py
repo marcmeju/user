@@ -1,5 +1,6 @@
 from asyncio.log import logger
-from datetime import timedelta
+from datetime import datetime, timedelta
+import logging
 import time
 from flask import Flask, g
 import os
@@ -10,6 +11,8 @@ from routes import user_blueprint
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from apscheduler.schedulers.background import BackgroundScheduler
+
+logging.basicConfig(level=logging.INFO)
 
 # Load the environment variables from the .env file
 load_dotenv()
@@ -115,4 +118,5 @@ app.register_blueprint(user_blueprint)
 
 #run the application
 if __name__ == '__main__':
+    logging.info(f"Starting User Service at {datetime.fromtimestamp(time.time())}")
     app.run(debug=True, port=5003)
